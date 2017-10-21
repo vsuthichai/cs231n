@@ -30,7 +30,42 @@ def softmax_loss_naive(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  N = X.shape[0]
+  D = X.shape[1]
+  C = W.shape[1]
+
+  for i in range(N):
+      # X[i] * W
+      class_scores = np.dot(X[i], W)
+    
+      # shift volume, make numerically stable
+      class_scores -= np.max(class_scores)
+    
+      # exp
+      exp_class_scores = np.exp(class_scores)
+    
+      # compute denominator sum
+      denominator = np.sum(exp_class_scores)
+      
+      # Compute gradient for each sample, each class
+      for c in range(C):
+          prob = exp_class_scores[c] / denominator
+          if y[i] == c:
+              dW[:, c] += (prob - 1.) * X[i]
+          else:
+              dW[:, c] += prob * X[i]
+      
+      # Compute loss
+      loss_per_example = exp_class_scores[y[i]] / denominator
+      loss += -np.log(loss_per_example)
+    
+  # Average loss and account for regularization term
+  loss /= N
+  loss += reg * np.sum(W * W)
+  
+  # average gradient
+  dW /= N
+  dW += 2 * reg * W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################

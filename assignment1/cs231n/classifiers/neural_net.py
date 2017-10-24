@@ -76,7 +76,9 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    pass
+    A1 = np.maximum(0, np.dot(X, W1) + b1)
+    A2 = np.dot(A1, W2) + b2
+    scores = A2
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -93,7 +95,19 @@ class TwoLayerNet(object):
     # in the variable loss, which should be a scalar. Use the Softmax           #
     # classifier loss.                                                          #
     #############################################################################
-    pass
+    
+    # Max shifted scores for numerical stability
+    scores -= np.max(scores, axis=1, keepdims=True)
+    
+    # Softmax calculation
+    exp_scores = np.exp(scores)
+    softmax_scores = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
+    
+    # Averaged cross entropy loss + regularization term
+    cross_entropy_loss = np.sum(-np.log(softmax_scores[range(N), y]))
+    R = reg * (np.sum(W2 * W2) + np.sum(W1 * W1))
+    loss = (cross_entropy_loss / N) + R
+    
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -105,7 +119,30 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+    dZ2 = softmax_scores        # (N, 3)
+    dZ2[range(N), y] -= 1
+    
+    dW2 = np.dot(A1.T, dZ2)     # (10, 3)
+    dW2 /= N
+    dW2 += 2 * reg * W2
+    grads['W2'] = dW2
+    
+    db2 = np.sum(dZ2, axis=0)   # (1, 3)
+    db2 /= N
+    grads['b2'] = db2
+    
+    dA1 = np.dot(dZ2, W2.T)           # (N, 10)
+    dZ1 = (A1 > 0).astype(int) * dA1  # (N, 10)
+    
+    dW1 = np.dot(X.T, dZ1)      # (4, 10)
+    dW1 /= N
+    dW1 += 2 * reg * W1
+    grads['W1'] = dW1
+    
+    db1 = np.sum(dZ1, axis=0)   # (1, 10)
+    db1 /= N
+    grads['b1'] = db1
+    
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################

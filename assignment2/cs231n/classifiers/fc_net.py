@@ -81,8 +81,8 @@ class TwoLayerNet(object):
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
         
-        W1, b1, W2, b2 = (self.params['W1'], self.params['W2'], 
-                         self.params['b1'], self.params['b2'])
+        W1, b1, W2, b2 = (self.params['W1'], self.params['b1'], 
+                         self.params['W2'], self.params['b2'])
 
         A1, cache_fc1 = affine_relu_forward(X, W1, b1)
         scores, cache_fc2 = affine_forward(A1, W2, b2)
@@ -107,13 +107,15 @@ class TwoLayerNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         
-        loss, d_loss = softmax_loss(X, y)
+        loss, d_loss = softmax_loss(scores, y)
+        loss += 0.5 * self.reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
+        
         dA1, dW2, db2 = affine_backward(d_loss, cache_fc2)
         dX, dW1, db1 = affine_relu_backward(dA1, cache_fc1)
         
-        grads['W1'] = dW1
+        grads['W1'] = dW1 + (self.reg * W1)
         grads['b1'] = db1
-        grads['W2'] = dW2
+        grads['W2'] = dW2 + (self.reg * W2)
         grads['b2'] = db2
 
         ############################################################################
@@ -181,7 +183,21 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
-        pass
+        
+        self.params['W1'] = np.random.randn(input_dim, hidden_dims[0])
+        self.params['b1'] = np.zeros((1, hiddem_dims[0]))
+        
+        for hidden_dim, layer in enumerate(hidden_dims):
+            w_name = 'W' + str(layer + 1)
+            b_name = 'b' + str(layer + 1)
+            
+            if layer == 1:
+                self.params[w_name] = np.random.randn(input_dim, hidden_dim)
+            else:
+                self.params[w_name] = np.random.randn(hidden_dim[layer - 1], hidden_dim)
+                
+            self.params[b_name] = np.random.randn((1, hidden_dim))
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################

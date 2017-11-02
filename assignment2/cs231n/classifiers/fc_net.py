@@ -189,9 +189,9 @@ class FullyConnectedNet(object):
             b_name = 'b' + str(layer)
             
             if layer == 1:
-                self.params[w_name] = np.random.randn(input_dim, hidden_dim) * weight_scale
+                self.params[w_name] = np.random.normal(0, weight_scale, (input_dim, hidden_dim))
             else:
-                self.params[w_name] = np.random.randn(hidden_dims[layer - 2], hidden_dim) * weight_scale
+                self.params[w_name] = np.random.normal(0, weight_scale, (hidden_dims[layer - 2], hidden_dim))
                 
             self.params[b_name] = np.zeros((1, hidden_dim))
             

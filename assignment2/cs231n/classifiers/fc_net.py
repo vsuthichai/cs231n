@@ -184,19 +184,25 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zero.                                #
         ############################################################################
         
-        self.params['W1'] = np.random.randn(input_dim, hidden_dims[0])
-        self.params['b1'] = np.zeros((1, hiddem_dims[0]))
-        
-        for hidden_dim, layer in enumerate(hidden_dims):
-            w_name = 'W' + str(layer + 1)
-            b_name = 'b' + str(layer + 1)
+        for layer, hidden_dim in enumerate(hidden_dims, 1):
+            w_name = 'W' + str(layer)
+            b_name = 'b' + str(layer)
             
             if layer == 1:
-                self.params[w_name] = np.random.randn(input_dim, hidden_dim)
+                self.params[w_name] = np.random.randn(input_dim, hidden_dim) * weight_scale
             else:
-                self.params[w_name] = np.random.randn(hidden_dim[layer - 1], hidden_dim)
+                self.params[w_name] = np.random.randn(hidden_dims[layer - 2], hidden_dim) * weight_scale
                 
-            self.params[b_name] = np.random.randn((1, hidden_dim))
+            self.params[b_name] = np.zeros((1, hidden_dim))
+            
+        self.params['W' + str(self.num_layers)] = np.random.randn(hidden_dims[-1], num_classes) * weight_scale
+        self.params['b' + str(self.num_layers)] = np.zeros((1, num_classes))
+        
+        '''
+        for k,v in self.params.items():
+            print(str(k))
+            print(str(v.shape))
+        '''
         
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -255,7 +261,27 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
-        pass
+        
+        caches = {}
+        
+        for hidden_layer_num in range(1, self.num_layers):
+            W = self.params['W' + str(hidden_layer_num)]
+            b = self.params['b' + str(hidden_layer_num)]
+            
+            if hidden_layer_num == 1:
+                prev_A = X
+            else:
+                prev_A = caches[hidden_layer_num - 1][0]
+
+            A, fc_cache = affine_relu_forward(prev_A, W, b)
+            caches[hidden_layer_num] = (A, fc_cache)
+
+        scores, c = affine_forward(caches[self.num_layers - 1][0], 
+                                   self.params['W' + str(self.num_layers)], 
+                                   self.params['b' + str(self.num_layers)])
+        
+        caches[self.num_layers] = (scores, c)
+            
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -278,7 +304,29 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        pass
+        
+        loss, d_loss = softmax_loss(scores, y)
+        
+        for k, W in self.params.items():
+            if k[0] == 'W':
+                loss += 0.5 * self.reg * np.sum(W * W)
+        
+        cache_dA = {}
+
+        for hidden_layer in reversed(range(1, self.num_layers + 1)):            
+            w_name = 'W' + str(hidden_layer)
+            b_name = 'b' + str(hidden_layer)
+            
+            if hidden_layer == self.num_layers:
+                dA, dW, db = affine_backward(d_loss, caches[hidden_layer][1])
+            else:
+                dA, dW, db = affine_relu_backward(cache_dA[hidden_layer + 1], caches[hidden_layer][1])
+                
+            cache_dA[hidden_layer] = dA
+            grads[w_name] = dW + (self.reg * self.params[w_name])
+            grads[b_name] = db
+
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################

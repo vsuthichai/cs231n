@@ -284,6 +284,10 @@ class FullyConnectedNet(object):
                                                          self.bn_params[hidden_layer_num - 1])
             else:
                 A, cache = affine_relu_forward(prev_A, W, b)
+                
+            if self.use_dropout:
+                A, dropout_cache = dropout_forward(A, self.dropout_param)
+                caches['dropout' + str(hidden_layer_num)] = dropout_cache
   
             caches[hidden_layer_num] = (A, cache)
 
@@ -325,22 +329,25 @@ class FullyConnectedNet(object):
         cache_dA = {}
 
         for hidden_layer in reversed(range(1, self.num_layers + 1)):            
-            w_name = 'W' + str(hidden_layer)
-            b_name = 'b' + str(hidden_layer)
+            w_name     = 'W' + str(hidden_layer)
+            b_name     = 'b' + str(hidden_layer)
             gamma_name = 'gamma' + str(hidden_layer)
-            beta_name = 'beta' + str(hidden_layer)
+            beta_name  = 'beta' + str(hidden_layer)
             
             if hidden_layer == self.num_layers:
                 dA, dW, db = affine_backward(d_loss, caches[hidden_layer][1])
             else:
+                dA = cache_dA[hidden_layer + 1]
+                
+                if self.use_dropout:
+                    dA = dropout_backward(dA, caches['dropout' + str(hidden_layer)])
+                    
                 if self.use_batchnorm:
-                    dA, dW, db, dgamma, dbeta = affine_batchnorm_relu_backward(cache_dA[hidden_layer + 1], 
-                                                                               caches[hidden_layer][1])
+                    dA, dW, db, dgamma, dbeta = affine_batchnorm_relu_backward(dA, caches[hidden_layer][1])
                     grads[gamma_name] = dgamma
                     grads[beta_name] = dbeta
                 else:
-                    dA, dW, db = affine_relu_backward(cache_dA[hidden_layer + 1], caches[hidden_layer][1])
-
+                    dA, dW, db = affine_relu_backward(dA, caches[hidden_layer][1])
             
             cache_dA[hidden_layer] = dA
             

@@ -441,20 +441,15 @@ def conv_forward_naive(x, w, b, conv_param):
     F, C, HH, WW = w.shape
     
     x_pad = np.pad(x, [(0,0), (0,0), (1,1), (1,1)], 'constant')
-    # print(x_pad.shape)
     
     H_prime = int(1 + (H + 2 * pad - HH) / stride)
     W_prime = int(1 + (W + 2 * pad - WW) / stride)
     out = np.empty((N, F, H_prime, W_prime))
     
     for n in range(0, N):
-        for row in range(0, H_prime, 1):
-            for col in range(0, W_prime, 1):
-                for f in range(0, F):
-                    #flter = w[f].reshape(1, -1)
-                    #volume = x_pad[n, :, row*stride:row*stride+HH, col*stride:col*stride+WW].reshape(1, -1).T
-                    #out[n, f, row, col] = flter.dot(volume) + b[f]
-                    
+        for row in range(0, H_prime):
+            for col in range(0, W_prime):
+                for f in range(0, F):                    
                     flter = w[f]
                     volume = x_pad[n, :, row*stride:row*stride+HH, col*stride:col*stride+WW]
                     out[n, f, row, col] = np.sum(flter * volume) + b[f]
@@ -483,10 +478,47 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
-    pass
+    
+    x, w, b, conv_param = cache
+    pad, stride = conv_param['pad'], conv_param['stride']
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+        
+    x_pad = np.pad(x, [(0,0), (0,0), (1,1), (1,1)], 'constant')
+    
+    H_prime = int(1 + (H + 2 * pad - HH) / stride)
+    W_prime = int(1 + (W + 2 * pad - WW) / stride)
+
+    db = np.zeros(b.shape)
+    dx = np.zeros(x_pad.shape)
+    dw = np.zeros(w.shape)
+
+    #print(x_pad)
+
+    for f in range(F):
+        for c in range(C):
+            for hh in range(HH):
+                for ww in range(WW):                    
+                    for n in range(0, N):
+                        for row in range(0, H_prime):
+                            for col in range(0, W_prime):
+                                row_stride = row * stride + hh
+                                col_stride = col * stride + ww
+
+                                #print("(%d, %d, %d, %d) n=%d row=%d col=%d %f" % (f, c, hh, ww, n, row_stride, col_stride, val))
+                                dw[f, c, hh, ww] += (x_pad[n, c, row_stride, col_stride] * dout[n, f, row, col])
+                                                                
+                                #print("%d %d %f" % (row_stride, col_stride, w[f, c, hh, ww]))
+                                dx[n, c, row_stride, col_stride] += (w[f, c, hh, ww] * dout[n, f, row, col])
+
+        db[f] = np.sum(dout[:, f, :, :])
+        
+    dx = dx[:, :, +stride:-stride, +stride:-stride]
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
+    
     return dx, dw, db
 
 

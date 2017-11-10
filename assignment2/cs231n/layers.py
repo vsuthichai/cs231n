@@ -440,7 +440,7 @@ def conv_forward_naive(x, w, b, conv_param):
     N, C, H, W = x.shape
     F, C, HH, WW = w.shape
     
-    x_pad = np.pad(x, [(0,0), (0,0), (1,1), (1,1)], 'constant')
+    x_pad = np.pad(x, [(0,0), (0,0), (pad, pad), (pad, pad)], 'constant')
     
     H_prime = int(1 + (H + 2 * pad - HH) / stride)
     W_prime = int(1 + (W + 2 * pad - WW) / stride)
@@ -484,7 +484,7 @@ def conv_backward_naive(dout, cache):
     N, C, H, W = x.shape
     F, C, HH, WW = w.shape
         
-    x_pad = np.pad(x, [(0,0), (0,0), (1,1), (1,1)], 'constant')
+    x_pad = np.pad(x, [(0,0), (0,0), (pad, pad), (pad, pad)], 'constant')
     
     H_prime = int(1 + (H + 2 * pad - HH) / stride)
     W_prime = int(1 + (W + 2 * pad - WW) / stride)
@@ -513,7 +513,7 @@ def conv_backward_naive(dout, cache):
 
         db[f] = np.sum(dout[:, f, :, :])
         
-    dx = dx[:, :, +stride:-stride, +stride:-stride]
+    dx = dx[:, :, +pad:-pad, +pad:-pad]
     
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -598,13 +598,14 @@ def max_pool_backward_naive(dout, cache):
                 for w in range(W_prime):
                     h_stride = h * stride
                     w_stride = w * stride
+                    h_stride_end = h_stride + pool_height
+                    w_stride_end = w_stride + pool_width
                     
-                    pool = x[n, c, h_stride:h_stride+stride, w_stride:w_stride+stride]
-                    i = np.argmax(pool)
-                    row, col = np.unravel_index(i, pool.shape)
-                    pool[:, :] = 0.
+                    i = np.argmax(x[n, c, h_stride:h_stride_end, w_stride:w_stride_end])
+                    row, col = np.unravel_index(i, (pool_height, pool_width))
+                    pool = np.zeros((pool_height, pool_width))
                     pool[row, col] = dout[n, c, h, w]
-                    dx[n, c, h_stride:h_stride+stride, w_stride:w_stride+stride] = pool
+                    dx[n, c, h_stride:h_stride_end, w_stride:w_stride_end] = pool
     
     ###########################################################################
     #                             END OF YOUR CODE                            #

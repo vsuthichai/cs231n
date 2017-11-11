@@ -101,6 +101,7 @@ class ThreeLayerConvNet(object):
         Z2, Z2_cache = affine_forward(pool_flat1, W2, b2)
         A2, A2_cache = relu_forward(Z2)
         Z3, Z3_cache = affine_forward(A2, W3, b3)
+        scores = Z3
         
         ############################################################################
         #                             END OF YOUR CODE                             #

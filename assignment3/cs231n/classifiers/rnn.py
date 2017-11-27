@@ -156,7 +156,7 @@ class CaptioningRNN(object):
         
         # (4)
         scores, cache_temporal_affine_forward = temporal_affine_forward(hidden_states, W_vocab, b_vocab) 
-            
+
         # (5)
         loss, dScores = temporal_softmax_loss(scores, captions_out, mask)
         
@@ -236,7 +236,26 @@ class CaptioningRNN(object):
         # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
         # a loop.                                                                 #
         ###########################################################################
-        pass
+        
+        W, H = Wx.shape
+        V = b_vocab.shape[0]
+        
+        # (1)
+        captions[:, 0] = self._start
+        
+        # (2)
+        h0 = np.tanh(features.dot(W_proj) + b_proj)
+        prev_h = h0
+        
+        for t in range(1, max_length):
+            # (3)
+            next_h, _ = rnn_step_forward(W_embed[captions[:, t-1]], prev_h, Wx, Wh, b)
+            scores, _ = temporal_affine_forward(next_h.reshape(N, 1, H), W_vocab, b_vocab)
+            prev_h = next_h
+
+            # (4)
+            captions[:, t] = scores.reshape(N, V).argmax(axis=1)
+        
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################

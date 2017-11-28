@@ -279,7 +279,20 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     # TODO: Implement the forward pass for a single timestep of an LSTM.        #
     # You may want to use the numerically stable sigmoid implementation above.  #
     #############################################################################
-    pass
+    
+    N, H = prev_h.shape
+    
+    A = x.dot(Wx) + prev_h.dot(Wh) + b
+    i = sigmoid(A[:, 0:H])
+    f = sigmoid(A[:, H:2*H])
+    o = sigmoid(A[:, 2*H:3*H])
+    g = np.tanh(A[:, 3*H:])
+    
+    next_c = (prev_c * f) + (i * g)
+    next_h = o * np.tanh(next_c)
+    
+    cache = (x, prev_h, prev_c, Wx, Wh, b, A, i, f, o, g, next_c, next_h)
+    
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -311,7 +324,35 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
     # HINT: For sigmoid and tanh you can compute local derivatives in terms of  #
     # the output value from the nonlinearity.                                   #
     #############################################################################
-    pass
+    
+    N, H = dnext_h.shape
+    x, prev_h, prev_c, Wx, Wh, b, A, i, f, o, g, next_c, next_h = cache
+
+    dnext_c += dnext_h * o * (1 - np.tanh(next_c)**2)
+    dprev_c = dnext_c * f
+
+    di = dnext_c * g
+    df = dnext_c * prev_c
+    do = dnext_h * np.tanh(next_c)
+    dg = dnext_c * i
+    
+    di_dA = i * (1 - i)
+    df_dA = f * (1 - f)
+    do_dA = o * (1 - o)
+    dg_dA = 1 - g**2
+        
+    dA = np.zeros((N, 4 * H))
+    dA[:, 0:H] = di * di_dA
+    dA[:, H:2*H] = df * df_dA
+    dA[:, 2*H:3*H] = do * do_dA
+    dA[:, 3*H:4*H] = dg * dg_dA
+    
+    dx = dA.dot(Wx.T)
+    dWx = x.T.dot(dA)
+    db = dA.sum(axis=0)
+    dWh = prev_h.T.dot(dA)
+    dprev_h = dA.dot(Wh.T)
+    
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -346,7 +387,7 @@ def lstm_forward(x, h0, Wx, Wh, b):
     # TODO: Implement the forward pass for an LSTM over an entire timeseries.   #
     # You should use the lstm_step_forward function that you just defined.      #
     #############################################################################
-    pass
+    
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################

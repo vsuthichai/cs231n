@@ -150,9 +150,9 @@ class CaptioningRNN(object):
                     
         # (3)
         if self.cell_type == 'rnn':
-            hidden_states, cache_run_forward = rnn_forward(X_caption, h0, Wx, Wh, b)
-        else:
-            pass
+            hidden_states, cache_forward = rnn_forward(X_caption, h0, Wx, Wh, b)
+        elif self.cell_type == 'lstm':
+            hidden_states, cache_forward = lstm_forward(X_caption, h0, Wx, Wh, b)
         
         # (4)
         scores, cache_temporal_affine_forward = temporal_affine_forward(hidden_states, W_vocab, b_vocab) 
@@ -162,7 +162,11 @@ class CaptioningRNN(object):
         
         # Backpropagate
         dHidden, dW_vocab, db_vocab = temporal_affine_backward(dScores, cache_temporal_affine_forward)
-        dx, dh0, dWx, dWh, db = rnn_backward(dHidden, cache_run_forward)
+        if self.cell_type == 'rnn':
+            dx, dh0, dWx, dWh, db = rnn_backward(dHidden, cache_forward)
+        elif self.cell_type == 'lstm':
+            dx, dh0, dWx, dWh, db = lstm_backward(dHidden, cache_forward)
+            
         dW_embed = word_embedding_backward(dx, cache_word_embedding)
         
         # Set gradients
@@ -246,11 +250,18 @@ class CaptioningRNN(object):
         # (2)
         h0 = np.tanh(features.dot(W_proj) + b_proj)
         prev_h = h0
+        prev_c = np.zeros_like(prev_h)
         
         for t in range(1, max_length):
             # (3)
-            next_h, _ = rnn_step_forward(W_embed[captions[:, t-1]], prev_h, Wx, Wh, b)
-            scores, _ = temporal_affine_forward(next_h.reshape(N, 1, H), W_vocab, b_vocab)
+            if self.cell_type == 'rnn':
+                next_h, _ = rnn_step_forward(W_embed[captions[:, t-1]], prev_h, Wx, Wh, b)
+                scores, _ = temporal_affine_forward(next_h.reshape(N, 1, H), W_vocab, b_vocab)
+            elif self.cell_type == 'lstm':
+                next_h, next_c, _ = lstm_step_forward(W_embed[captions[:, t-1]], prev_h, prev_c, Wx, Wh, b)
+                scores, _ = temporal_affine_forward(next_h.reshape(N, 1, next_h.shape[1]), W_vocab, b_vocab)
+                prev_c = next_c
+            
             prev_h = next_h
 
             # (4)

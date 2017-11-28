@@ -388,6 +388,26 @@ def lstm_forward(x, h0, Wx, Wh, b):
     # You should use the lstm_step_forward function that you just defined.      #
     #############################################################################
     
+    N, T, D = x.shape
+    H = h0.shape[1]
+    
+    prev_h = h0
+    prev_c = np.zeros((N, H))
+    
+    h = np.zeros((N, T, H))
+    c = np.zeros((N, T, H))
+    
+    forward_cache = {}
+    
+    for t in range(T):
+        next_h, next_c, forward_cache[t] = lstm_step_forward(x[:, t, :], prev_h, prev_c, Wx, Wh, b)
+        h[:, t, :] = next_h
+        c[:, t, :] = next_c
+        prev_h = next_h
+        prev_c = next_c
+        
+    cache = (x, h0, Wx, Wh, b, h, c, forward_cache)
+    
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
